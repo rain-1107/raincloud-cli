@@ -13,13 +13,32 @@ def create_config() -> None:
     with open(CONFIG_FOLDER + "/config.json", "w") as conf_file:
         json.dump({"ftp_config": {"ip": "", "user": "", "passwd": "", "port": 21}, "local_conf": {}}, conf_file, indent=2)
 
-def get_folder_structure(path, local = False):
-    folder = {}
+def get_folder_structure(path):
+    dirs = []
+    for (_, dirnames, _) in os.walk(os.path.expanduser(path)):
+        dirs = dirnames
+        break
+    if dirs:
+        struct = {}
+        for d in dirs:
+            struct[d] = get_folder_structure(path + "/" + d)
+        return struct
+    return {}
+
+def create_folder_structure(name, struct, ftp):
+    ftp.mkd(name)
+    ftp.cwd(name)
+    for key in struct:
+        create_folder_structure(key, struct[key], ftp)
+    ftp.cwd("..")
+
+def get_filepaths(path, local = False):
+    f = []
     for (dirpath, _, filenames) in os.walk(path):
         for file in filenames:
-            name = dirpath + "/" + file
+            name = os.path.join(dirpath, file)
             if local:
-                name = name[len(path)+1:]
+                name = name[len(path):]
             f.append(name)
     return f
 
@@ -86,9 +105,16 @@ def main() -> None:
         items = ftp.nlst()
         for dir in data["local_conf"]:
             if dir not in items:
-                ftp.mkd(dir)
-                ftp.cwd(dir)
                 # Upload all
+                folder = get_folder_structure(data["local_conf"][dir])
+                create_folder_structure(dir, folder, ftp)
+                ftp.cwd(dir)
+                paths = get_filepaths(data["local_conf"][dir])
+                names = get_filepaths(data["local_conf"][dir], local = True)
+                for i, f in enumerate(paths):
+                    print(f, f"STOR {names[i]}")
+                    with open(f, "rb") as fp:
+                        ftp.storbinary(f"STOR {names[i]}", fp)
             else:
                 ftp.cwd(dir)
                 # Individual folder logic
