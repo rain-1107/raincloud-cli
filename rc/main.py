@@ -1,5 +1,6 @@
 import os
 import sys
+from time import time
 import json
 import shutil
 from ftplib import FTP
@@ -29,6 +30,11 @@ def get_filenames(path):
         break
     return f
 
+def download_folder(name):
+    ...
+
+def upload_folder(name):
+    ...
 
 def main() -> None:
     if not os.path.isdir(CONFIG_FOLDER):
@@ -61,6 +67,20 @@ def main() -> None:
             data["local_conf"][names[i]] = f
         with open(CONFIG_FOLDER + "/config.json", "w") as fp:
             json.dump(data, fp, indent=2)
+        return
+    if sys.argv[1].lower() == "remove":
+        names = sys.argv[2:]
+        data: dict = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
+        for n in names:
+            if n in data["local_conf"]:
+                data["local_conf"].pop(n)
+        with open(CONFIG_FOLDER + "/config.json", "w") as fp:
+            json.dump(data, fp, indent=2)
+        return
+    if sys.argv[1].lower() == "list":
+        data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
+        for name in data["local_conf"]:
+            print(f"{name} - '{data["local_conf"][name]}'")
         return
     if sys.argv[1].lower() == "reset":
         shutil.rmtree(CONFIG_FOLDER)
