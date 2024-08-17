@@ -8,10 +8,26 @@ HOME = os.path.expanduser("~")
 CONFIG_FOLDER = HOME + "/.rc"
 
 
-def create_config():
+def create_config() -> None:
     os.mkdir(CONFIG_FOLDER)
     with open(CONFIG_FOLDER + "/config.json", "w") as conf_file:
         json.dump({"ftp_config": {"ip": "", "user": "", "passwd": "", "port": 21}, "local_conf": {}}, conf_file, indent=2)
+
+def get_filepaths(path):
+    f = []
+    for (dirpath, _, filenames) in os.walk(path):
+        for file in filenames:
+            f.append(dirpath + "/" + file)
+        break
+    return f
+
+def get_filenames(path):
+    f = []
+    for (_, _, filenames) in os.walk(path):
+        for file in filenames:
+            f.append(file)
+        break
+    return f
 
 
 def main() -> None:
@@ -53,8 +69,26 @@ def main() -> None:
         return
     if sys.argv[1].lower() == "sync":
         data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
+        print(f"Syncing to remote at '{data["ftp_config"]["ip"]}'")
         ftp = FTP(data["ftp_config"]["ip"])
-        ftp.login(user=data["ftp_config"]["user"], passwd=data["ftp_config"]["passwd"])
+        print("FTP: " + ftp.login(user=data["ftp_config"]["user"], passwd=data["ftp_config"]["passwd"]))
+        items = ftp.nlst()
+        if "raincloud" not in items:
+            ftp.mkd("raincloud")
+        ftp.cwd("raincloud")
+        items = ftp.nlst()
+        for dir in data["local_conf"]:
+            if dir not in items:
+                ftp.mkd(dir)
+            ftp.cwd(dir)
+            files = get_filepaths(data["local_conf"][dir])
+            names = get_filenames(data["local_conf"][dir])
+            for i, f in enumerate(files):
+                fp = open(f, "rb")
+                ftp.storbinary(f"STOR {names[i]}", fp)
+            ftp.cwd("..")
+        print("FTP: " + ftp.quit())
+        return
     print(f"Unrecognized command 'sys.argv[1]'")
 
 
