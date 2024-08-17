@@ -8,33 +8,20 @@ from ftplib import FTP
 HOME = os.path.expanduser("~")
 CONFIG_FOLDER = HOME + "/.rc"
 
-
 def create_config() -> None:
     os.mkdir(CONFIG_FOLDER)
     with open(CONFIG_FOLDER + "/config.json", "w") as conf_file:
         json.dump({"ftp_config": {"ip": "", "user": "", "passwd": "", "port": 21}, "local_conf": {}}, conf_file, indent=2)
 
-def get_filepaths(path):
-    f = []
+def get_folder_structure(path, local = False):
+    folder = {}
     for (dirpath, _, filenames) in os.walk(path):
         for file in filenames:
-            f.append(dirpath + "/" + file)
-        break
+            name = dirpath + "/" + file
+            if local:
+                name = name[len(path)+1:]
+            f.append(name)
     return f
-
-def get_filenames(path):
-    f = []
-    for (_, _, filenames) in os.walk(path):
-        for file in filenames:
-            f.append(file)
-        break
-    return f
-
-def download_folder(name):
-    ...
-
-def upload_folder(name):
-    ...
 
 def main() -> None:
     if not os.path.isdir(CONFIG_FOLDER):
@@ -100,12 +87,19 @@ def main() -> None:
         for dir in data["local_conf"]:
             if dir not in items:
                 ftp.mkd(dir)
-            ftp.cwd(dir)
-            files = get_filepaths(data["local_conf"][dir])
-            names = get_filenames(data["local_conf"][dir])
-            for i, f in enumerate(files):
-                fp = open(f, "rb")
-                ftp.storbinary(f"STOR {names[i]}", fp)
+                ftp.cwd(dir)
+                # Upload all
+            else:
+                ftp.cwd(dir)
+                # Individual folder logic
+                files = get_filepaths(data["local_conf"][dir])
+                names = []
+                for f in files:
+                    names.append(f.split("/")[-1])
+                for i, f in enumerate(files):
+                    fp = open(f, "rb")
+                    ftp.storbinary(f"STOR {names[i]}", fp)
+                # -----------------------
             ftp.cwd("..")
         print("FTP: " + ftp.quit())
         return
