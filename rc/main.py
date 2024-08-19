@@ -10,6 +10,7 @@ CONFIG_FOLDER = HOME + "/.rc"
 
 def create_config() -> None:
     os.mkdir(CONFIG_FOLDER)
+    os.mkdir(os.path.join(CONFIG_FOLDER, "data"))
     with open(CONFIG_FOLDER + "/config.json", "w") as conf_file:
         json.dump({"ftp_config": {"ip": "", "user": "", "passwd": "", "port": 21}, "local_conf": {}}, conf_file, indent=2)
 
@@ -41,6 +42,21 @@ def get_filepaths(path, local = False):
                 name = name[len(path):]
             f.append(name)
     return f
+
+def get_mtimes(path):
+    files = get_filepaths(path)
+    names = get_filepaths(path, True)
+    data = {}
+    for i, f in enumerate(files):
+        data[names[i]] = os.path.getmtime(f)
+    return data
+
+def connect_to_server():
+    data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
+    print(f"Syncing to remote at '{data["ftp_config"]["ip"]}'")
+    ftp = FTP(data["ftp_config"]["ip"])
+    print("FTP: " + ftp.login(user=data["ftp_config"]["user"], passwd=data["ftp_config"]["passwd"])) 
+    return ftp
 
 def main() -> None:
     if not os.path.isdir(CONFIG_FOLDER):
@@ -106,16 +122,21 @@ def main() -> None:
         for dir in data["local_conf"]:
             if dir not in items:
                 # Upload all
+                mtime_data = get_mtimes(data["local_conf"][dir]) 
+                with open(os.path.join(CONFIG_FOLDER, f"{dir}.json"), "w") as mtime_file:
+                    json.dump(mtime_data, mtime_file)
                 folder = get_folder_structure(data["local_conf"][dir])
                 create_folder_structure(dir, folder, ftp)
+                with open(os.path.join(CONFIG_FOLDER, f"{dir}.json"), "rb") as mtime_file:
+                    ftp.storbinary(f"STOR {dir}.json", mtime_file)
                 ftp.cwd(dir)
                 paths = get_filepaths(data["local_conf"][dir])
                 names = get_filepaths(data["local_conf"][dir], local = True)
                 for i, f in enumerate(paths):
-                    print(f, f"STOR {names[i]}")
                     with open(f, "rb") as fp:
                         ftp.storbinary(f"STOR {names[i]}", fp)
             else:
+
                 ftp.cwd(dir)
                 # Individual folder logic
                 files = get_filepaths(data["local_conf"][dir])
@@ -123,13 +144,13 @@ def main() -> None:
                 for f in files:
                     names.append(f.split("/")[-1])
                 for i, f in enumerate(files):
-                    fp = open(f, "rb")
-                    ftp.storbinary(f"STOR {names[i]}", fp)
+                    with open(f, "rb") as fp:
+                        ftp.storbinary(f"STOR {names[i]}", fp)
                 # -----------------------
             ftp.cwd("..")
         print("FTP: " + ftp.quit())
         return
-    print(f"Unrecognized command 'sys.argv[1]'")
+    print(f"Unrecognized command '{sys.argv[1]}'")
 
 
 if __name__ == '__main__':
