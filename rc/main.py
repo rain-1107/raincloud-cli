@@ -109,7 +109,7 @@ def sync_folders() -> None:
                     f_data = get_file_bytes(ftp, n)
                     with open(paths[i], "wb") as fp:
                         fp.write(f_data)
-                    os.utime(paths[i], (server_data["file_data"][n], time()))
+                    os.utime(paths[i], (server_data["file_data"][n], server_data["file_data"][n]))
             for file in server_data["file_data"]:
                 if file not in names:
                     print(f"Downloading '{file}' (New)") 
