@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+from time import time
 import shutil
 from ftplib import FTP
 from util import *
@@ -108,6 +109,7 @@ def sync_folders() -> None:
                     f_data = get_file_bytes(ftp, n)
                     with open(paths[i], "wb") as fp:
                         fp.write(f_data)
+                    os.utime(paths[i], (server_data["file_data"][n], time()))
             for file in server_data["file_data"]:
                 if file not in names:
                     print(f"Downloading '{file}' (New)") 
