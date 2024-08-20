@@ -11,7 +11,7 @@ def format_path(path: str) -> str:
 
 def connect_to_server() -> FTP:
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
-    print(f"Syncing to remote at '{data["ftp_config"]["ip"]}'")
+    print(f"Syncing to remote at '{data['ftp_config']['ip']}'")
     ftp = FTP(data["ftp_config"]["ip"])
     print("FTP: " + ftp.login(user=data["ftp_config"]["user"], passwd=data["ftp_config"]["passwd"])) 
     return ftp
