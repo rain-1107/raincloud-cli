@@ -28,6 +28,7 @@ def add_folder() -> None:
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r")) 
     for i, f in enumerate(folders):
         data["local_conf"][names[i]] = format_path(f)
+        print(f"Added '{names[i]}' at '{folders[i]}'")
     with open(CONFIG_FOLDER + "/config.json", "w") as fp:
         json.dump(data, fp, indent=2)
 
@@ -41,9 +42,12 @@ def remove_folders() -> None:
         json.dump(data, fp, indent=2)
 
 def list_folders() -> None:
+    total = 0
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
     for name in data["local_conf"]:
+        total += 1
         print(f"{name} - '{data['local_conf'][name]}'")
+    print(f"Total: {total}")
 
 def reset_config() -> None:
     shutil.rmtree(CONFIG_FOLDER)
@@ -83,6 +87,13 @@ def sync_folders() -> None:
         else:
             ftp.cwd(dir)
             # Individual folder logic
+            try:
+                create_backup(dir)
+            except:
+                buf = input("Backup failed. \n Do you wish to continue? [y/n]")
+                if buf.lower() != "y":
+                    print(f"Skipping '{dir}'")
+                    continue
             mtime_data = get_mtimes(data["local_conf"][dir])
             folder = get_local_folder_structure(data["local_conf"][dir])
             with open(os.path.join(CONFIG_FOLDER, "data", f"{dir}.json"), "w") as dir_data:
@@ -132,6 +143,16 @@ def sync_folders() -> None:
     ftp.quit()
     print("Finished syncing")
 
+def lbackups():
+    dirs = sys.argv[2:]
+    data: dict = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
+    for dir in dirs:
+        if dir not in data["local_conf"]:
+            continue
+        com = input(f"Are you sure you want to load backup of '{dir}'? [y/n]")
+        if com.lower() != "y":
+            continue
+        load_backup(dir)
 
 def main() -> None:
     if not os.path.isdir(CONFIG_FOLDER):
@@ -160,6 +181,19 @@ def main() -> None:
             sync_folders()
         except TimeoutError:
             print("Connection timed out.")
+        return
+    if sys.argv[1].lower() == "lbackup":
+        lbackups()
+        return
+    if sys.argv[1].lower() == "help":
+        print("""Command list
+remote - set the ftp server ip, user and password
+add [args] - add directories to be tracked (by path)
+remove [args] - remove directories (by ID/Name)
+sync - syncs all folders with remote server
+list - list all directories being tracked
+reset - fully resets config (including saved directories)
+lbackup [args] - swaps backup with files in directory (by ID/name)""")
         return
     print(f"Unrecognized command '{sys.argv[1]}'")
 

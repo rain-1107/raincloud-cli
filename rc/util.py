@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 from ftplib import FTP, error_perm
 
 HOME = os.path.expanduser("~")
@@ -82,3 +83,26 @@ def get_file_bytes(ftp: FTP, file: str) -> bytes:
             b = b + block
     return b
 
+def create_backup(dir: str) -> None:
+    print("Creating backup")
+    data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
+    path = data["local_conf"][dir]
+    try:
+        shutil.rmtree(os.path.join(CONFIG_FOLDER, "backup", dir))
+    except FileNotFoundError:
+        pass
+    shutil.copytree(path, os.path.join(CONFIG_FOLDER, "backup", dir))
+
+def load_backup(dir: str) -> None:
+    print(f"Loading backup of '{dir}'")
+    data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
+    path = data["local_conf"][dir]
+    try:
+        shutil.rmtree(os.path.join(CONFIG_FOLDER, "tmp", dir))
+    except FileNotFoundError:
+        pass
+    shutil.copytree(path, os.path.join(CONFIG_FOLDER, "tmp", dir))
+    shutil.rmtree(path)
+    shutil.copytree(os.path.join(CONFIG_FOLDER, "backup", dir), path)
+    shutil.rmtree(os.path.join(CONFIG_FOLDER, "backup", dir))
+    shutil.copytree(os.path.join(CONFIG_FOLDER, "tmp", dir), os.path.join(CONFIG_FOLDER, "backup", dir))
