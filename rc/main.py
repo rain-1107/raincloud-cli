@@ -52,7 +52,11 @@ def reset_config() -> None:
  
 def sync_folders() -> None:
     data = json.load(open(os.path.join(CONFIG_FOLDER, "config.json"), "r"))
+    if not data["ftp_config"]["ip"]:
+        print("No remote set")
+        return
     ftp = connect_to_server()
+    print("Connected to server")
     items = ftp.nlst()
     if "raincloud" not in items:
         ftp.mkd("raincloud")
@@ -74,7 +78,7 @@ def sync_folders() -> None:
             names = get_filepaths(data["local_conf"][dir], local = True)
             for i, f in enumerate(paths):
                 with open(f, "rb") as fp:
-                    print(f"    {names[i]}")
+                    print(f"Uploading '{names[i]}'")
                     ftp.storbinary(f"STOR {names[i]}", fp)
         else:
             ftp.cwd(dir)
@@ -118,12 +122,15 @@ def sync_folders() -> None:
                     f_data = get_file_bytes(ftp, file)
                     with open(os.path.join(data["local_conf"][dir], file), "wb") as fp:
                         fp.write(f_data)
+                    os.utime(os.path.join(data["local_conf"][dir], file), (server_data["file_data"][file], server_data["file_data"][file]))
             # -----------------------
             ftp.cwd("..")
             # ftp.delete(f"STOR {dir}.json")
             with open(os.path.join(CONFIG_FOLDER, "data", f"{dir}.json"), "rb") as dir_conf:
                 ftp.storbinary(f"STOR {dir}.json", dir_conf)
-        ftp.quit()
+        print(f"'{dir}' synced.")
+    ftp.quit()
+    print("Finished syncing")
 
 
 def main() -> None:
@@ -149,7 +156,10 @@ def main() -> None:
         reset_config()
         return
     if sys.argv[1].lower() == "sync":
-        sync_folders()
+        try:
+            sync_folders()
+        except TimeoutError:
+            print("Connection timed out.")
         return
     print(f"Unrecognized command '{sys.argv[1]}'")
 

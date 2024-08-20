@@ -12,8 +12,8 @@ def format_path(path: str) -> str:
 def connect_to_server() -> FTP:
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
     print(f"Syncing to remote at '{data['ftp_config']['ip']}'")
-    ftp = FTP(data["ftp_config"]["ip"])
-    print("FTP: " + ftp.login(user=data["ftp_config"]["user"], passwd=data["ftp_config"]["passwd"])) 
+    ftp = FTP(data["ftp_config"]["ip"], timeout=5)
+    ftp.login(user=data["ftp_config"]["user"], passwd=data["ftp_config"]["passwd"])
     return ftp
 
 def create_config() -> None:
@@ -74,6 +74,7 @@ def get_file_bytes(ftp: FTP, file: str) -> bytes:
 
     def callback(b):
         data.append(b)
+    
     ftp.retrbinary(f"RETR {file}", callback)
     b = data.pop(0)
     for block in data:
