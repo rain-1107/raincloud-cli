@@ -81,6 +81,8 @@ def sync_folders() -> None:
             # Individual folder logic
             mtime_data = get_mtimes(data["local_conf"][dir])
             folder = get_local_folder_structure(data["local_conf"][dir])
+            with open(os.path.join(CONFIG_FOLDER, "data", f"{dir}.json"), "w") as dir_data:
+                json.dump({"file_data": mtime_data, "folder_structure": folder}, dir_data)  
             with open(os.path.join(CONFIG_FOLDER, "tmp", f"{dir}.json"), "wb") as server_mtime:
                 ftp.cwd("..")
                 file_data = get_file_bytes(ftp, f"{dir}.json")
@@ -118,6 +120,9 @@ def sync_folders() -> None:
                         fp.write(f_data)
             # -----------------------
             ftp.cwd("..")
+            # ftp.delete(f"STOR {dir}.json")
+            with open(os.path.join(CONFIG_FOLDER, "data", f"{dir}.json"), "rb") as dir_conf:
+                ftp.storbinary(f"STOR {dir}.json", dir_conf)
         ftp.quit()
 
 
