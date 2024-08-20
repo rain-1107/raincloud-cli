@@ -91,6 +91,7 @@ def sync_folders() -> None:
             create_local_folder_structure(os.path.join(CONFIG_FOLDER, "tmp", dir), server_data["folder_structure"])
             new_structure = get_local_folder_structure(os.path.join(CONFIG_FOLDER, "tmp", dir))
             create_server_folder_structure(dir, new_structure, ftp)
+            create_local_folder_structure(data["local_conf"][dir], new_structure)
             paths = get_filepaths(data["local_conf"][dir])
             names = get_filepaths(data["local_conf"][dir], local = True)
             for i, n in enumerate(names):
