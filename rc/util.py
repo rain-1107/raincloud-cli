@@ -71,11 +71,13 @@ def get_mtimes(path: str) -> dict[str, int]:
 
 def get_file_bytes(ftp: FTP, file: str) -> bytes:
     data = []
+
     def callback(b):
         data.append(b)
     ftp.retrbinary(f"RETR {file}", callback)
-    b = data[0]
-    for block in data[1:]:
-        b = b.join(block)
+    b = data.pop(0)
+    for block in data:
+        if type(block) == bytes:
+            b = b + block
     return b
 

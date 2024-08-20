@@ -96,7 +96,10 @@ def sync_folders() -> None:
             for i, n in enumerate(names):
                 if n not in server_data["file_data"] or mtime_data[n] > server_data["file_data"][n]: # upload
                     print(f"Uploading '{n}'")
-                    ftp.delete(n)
+                    try:
+                        ftp.delete(n)
+                    except error_perm:
+                        pass
                     with open(paths[i], "rb") as fp:
                         ftp.storbinary(f"STOR {n}", fp)
                 elif mtime_data[n] < server_data["file_data"][n]: # download
