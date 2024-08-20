@@ -42,7 +42,7 @@ def remove_folders() -> None:
 def list_folders() -> None:
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
     for name in data["local_conf"]:
-        print(f"{name} - '{data["local_conf"][name]}'")
+        print(f"{name} - '{data['local_conf'][name]}'")
 
 def reset_config() -> None:
     shutil.rmtree(CONFIG_FOLDER)
