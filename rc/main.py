@@ -27,7 +27,7 @@ def add_folder() -> None:
             folders.remove(f)
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r")) 
     for i, f in enumerate(folders):
-        data["local_conf"][names[i]] = format_path(f)
+        data["saves"].append({"name": names[i], "path": format_path(f)})
         print(f"Added '{names[i]}' at '{folders[i]}'")
     with open(CONFIG_FOLDER + "/config.json", "w") as fp:
         json.dump(data, fp, indent=2)
@@ -36,17 +36,19 @@ def remove_folders() -> None:
     names = sys.argv[2:]
     data: dict = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
     for n in names:
-        if n in data["local_conf"]:
-            data["local_conf"].pop(n)
+        try:
+            data["saves"].pop(get_saves().index(n))
+        except ValueError:
+            pass
     with open(CONFIG_FOLDER + "/config.json", "w") as fp:
         json.dump(data, fp, indent=2)
 
 def list_folders() -> None:
     total = 0
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
-    for name in data["local_conf"]:
+    for name in get_saves():
         total += 1
-        print(f"{name} - '{data['local_conf'][name]}'")
+        print(f"{name} - '{get_path(name)}'")
     print(f"Total: {total}")
 
 def reset_config() -> None:
@@ -66,20 +68,20 @@ def sync_folders() -> None:
         ftp.mkd("raincloud")
     ftp.cwd("raincloud")
     items = ftp.nlst()
-    for dir in data["local_conf"]:
+    for dir in get_saves():
         print(f"Syncing '{dir}'")
         if dir not in items:
             # Upload all
-            mtime_data = get_mtimes(data["local_conf"][dir])
-            folder = get_local_folder_structure(data["local_conf"][dir]) 
+            mtime_data = get_mtimes(get_path(dir))
+            folder = get_local_folder_structure(get_path(dir)) 
             with open(os.path.join(CONFIG_FOLDER, "data", f"{dir}.json"), "w") as dir_data:
                 json.dump({"file_data": mtime_data, "folder_structure": folder}, dir_data)            
             create_server_folder_structure(dir, folder, ftp)
             with open(os.path.join(CONFIG_FOLDER, "data", f"{dir}.json"), "rb") as mtime_file:
                 ftp.storbinary(f"STOR {dir}.json", mtime_file)
             ftp.cwd(dir)
-            paths = get_filepaths(data["local_conf"][dir])
-            names = get_filepaths(data["local_conf"][dir], local = True)
+            paths = get_filepaths(get_path(dir))
+            names = get_filepaths(get_path(dir), local = True)
             for i, f in enumerate(paths):
                 with open(f, "rb") as fp:
                     print(f"Uploading '{names[i]}'")
@@ -94,8 +96,8 @@ def sync_folders() -> None:
                 if buf.lower() != "y":
                     print(f"Skipping '{dir}'")
                     continue
-            mtime_data = get_mtimes(data["local_conf"][dir])
-            folder = get_local_folder_structure(data["local_conf"][dir])
+            mtime_data = get_mtimes(get_path(dir))
+            folder = get_local_folder_structure(get_path(dir))
             with open(os.path.join(CONFIG_FOLDER, "data", f"{dir}.json"), "w") as dir_data:
                 json.dump({"file_data": mtime_data, "folder_structure": folder}, dir_data)  
             with open(os.path.join(CONFIG_FOLDER, "tmp", f"{dir}.json"), "wb") as server_mtime:
@@ -111,9 +113,9 @@ def sync_folders() -> None:
             new_structure = get_local_folder_structure(os.path.join(CONFIG_FOLDER, "tmp", dir))
             create_server_folder_structure(dir, new_structure, ftp)
             ftp.cwd(dir)
-            create_local_folder_structure(data["local_conf"][dir], new_structure)
-            paths = get_filepaths(data["local_conf"][dir])
-            names = get_filepaths(data["local_conf"][dir], local = True)
+            create_local_folder_structure(get_path(dir), new_structure)
+            paths = get_filepaths(get_path(dir))
+            names = get_filepaths(get_path(dir), local = True)
             for i, n in enumerate(names):
                 if n not in server_data["file_data"] or mtime_data[n] > server_data["file_data"][n]: # upload
                     print(f"Uploading '{n}'")
@@ -133,9 +135,9 @@ def sync_folders() -> None:
                 if file not in names:
                     print(f"Downloading '{file}' (New)") 
                     f_data = get_file_bytes(ftp, file)
-                    with open(os.path.join(data["local_conf"][dir], file), "wb") as fp:
+                    with open(os.path.join(get_path(dir), file), "wb") as fp:
                         fp.write(f_data)
-                    os.utime(os.path.join(data["local_conf"][dir], file), (server_data["file_data"][file], server_data["file_data"][file]))
+                    os.utime(os.path.join(get_path(dir), file), (server_data["file_data"][file], server_data["file_data"][file]))
             # -----------------------
             ftp.cwd("..")
             # ftp.delete(f"STOR {dir}.json")
@@ -149,7 +151,7 @@ def lbackups():
     dirs = sys.argv[2:]
     data: dict = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
     for dir in dirs:
-        if dir not in data["local_conf"]:
+        if dir not in data["saves"]:
             continue
         com = input(f"Are you sure you want to load backup of '{dir}'? [y/n]")
         if com.lower() != "y":

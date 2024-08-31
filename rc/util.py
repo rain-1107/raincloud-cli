@@ -22,7 +22,21 @@ def create_config() -> None:
     os.mkdir(os.path.join(CONFIG_FOLDER, "data"))
     os.mkdir(os.path.join(CONFIG_FOLDER, "tmp"))
     with open(CONFIG_FOLDER + "/config.json", "w") as conf_file:
-        json.dump({"ftp_config": {"ip": "", "user": "", "passwd": "", "port": 21}, "local_conf": {}}, conf_file, indent=2)
+        json.dump({"ftp_config": {"ip": "", "user": "", "passwd": "", "port": 21}, "saves": []}, conf_file, indent=2)
+ 
+def get_saves() -> list[str]:
+    saves = []
+    data = json.load(open(CONFIG_FOLDER + "/config.json", "r")) 
+    for s in data["saves"]:
+        saves.append(s["name"])
+    return saves
+
+def get_path(save: str) -> str:
+    data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
+    for i, s in enumerate(data["saves"]):
+        if save == data["saves"][i]["name"]:
+            return data["saves"][i]["path"]
+    raise Exception("Save does not exist.")
 
 def get_local_folder_structure(path: str) -> dict:
     dirs = []
@@ -86,7 +100,7 @@ def get_file_bytes(ftp: FTP, file: str) -> bytes:
 def create_backup(dir: str) -> None:
     print("Creating backup")
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
-    path = data["local_conf"][dir]
+    path = get_path(dir)
     try:
         shutil.rmtree(os.path.join(CONFIG_FOLDER, "backup", dir))
     except FileNotFoundError:
@@ -96,7 +110,7 @@ def create_backup(dir: str) -> None:
 def load_backup(dir: str) -> None:
     print(f"Loading backup of '{dir}'")
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
-    path = data["local_conf"][dir]
+    path = get_path(dir)
     try:
         shutil.rmtree(os.path.join(CONFIG_FOLDER, "tmp", dir))
     except FileNotFoundError:
@@ -106,3 +120,4 @@ def load_backup(dir: str) -> None:
     shutil.copytree(os.path.join(CONFIG_FOLDER, "backup", dir), path)
     shutil.rmtree(os.path.join(CONFIG_FOLDER, "backup", dir))
     shutil.copytree(os.path.join(CONFIG_FOLDER, "tmp", dir), os.path.join(CONFIG_FOLDER, "backup", dir))
+
