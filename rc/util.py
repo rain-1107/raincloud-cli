@@ -1,21 +1,11 @@
 import os
 import json
 import shutil
-from ftplib import FTP, error_perm
-
-HOME = os.path.expanduser("~")
-CONFIG_FOLDER = os.path.join(HOME, ".rc")
+from const import *
 
 def format_path(path: str) -> str:
     path = os.path.expanduser(path)
     return path.replace("\\", "/")
-
-def connect_to_server() -> FTP:
-    data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
-    print(f"Syncing to remote at '{data['ftp_config']['ip']}'")
-    ftp = FTP(data["ftp_config"]["ip"], timeout=5)
-    ftp.login(user=data["ftp_config"]["user"], passwd=data["ftp_config"]["passwd"])
-    return ftp
 
 def create_config() -> None:
     os.mkdir(CONFIG_FOLDER)
@@ -38,7 +28,7 @@ def get_path(save: str) -> str:
             return data["saves"][i]["path"]
     raise Exception("Save does not exist.")
 
-def get_local_folder_structure(path: str) -> dict:
+def get_folder_structure(path: str) -> dict:
     dirs = []
     for (_, dirnames, _) in os.walk(os.path.expanduser(path)):
         dirs = dirnames
@@ -50,21 +40,11 @@ def get_local_folder_structure(path: str) -> dict:
         return struct
     return {}
 
-def create_local_folder_structure(path: str, struct: dict) -> None:
+def create_folder_structure(path: str, struct: dict) -> None:
     if not os.path.isdir(path):
         os.mkdir(path)
     for key in struct:
         create_local_folder_structure(os.path.join(path, key), struct[key])
-
-def create_server_folder_structure(name: str, struct: dict, ftp: FTP) -> None:
-    try:
-        ftp.mkd(name)
-    except error_perm:
-        pass
-    ftp.cwd(name)
-    for key in struct:
-        create_server_folder_structure(key, struct[key], ftp)
-    ftp.cwd("..")
 
 def get_filepaths(path: str, local: bool = False) -> list[str]:
     f = []
@@ -83,19 +63,6 @@ def get_mtimes(path: str) -> dict[str, int]:
     for i, f in enumerate(files):
         data[names[i]] = os.path.getmtime(f)
     return data
-
-def get_file_bytes(ftp: FTP, file: str) -> bytes:
-    data = []
-
-    def callback(b):
-        data.append(b)
-    
-    ftp.retrbinary(f"RETR {file}", callback)
-    b = data.pop(0)
-    for block in data:
-        if type(block) == bytes:
-            b = b + block
-    return b
 
 def create_backup(dir: str) -> None:
     print("Creating backup")
