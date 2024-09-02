@@ -6,6 +6,9 @@ import shutil
 from ftplib import FTP
 from util import *
 
+# TODO: create raincloud server 'protocol' at https://github.com/rain-1107/raincloud-server
+# TODO: create ability to change remote server type from ftp to raincloud
+
 def set_remote() -> None:
     print("Please note that all data is kept in plain text")
     ip = input("Enter ftp server ip: ")
