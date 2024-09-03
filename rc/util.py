@@ -36,7 +36,7 @@ def get_folder_structure(path: str) -> dict:
     if dirs:
         struct = {}
         for d in dirs:
-            struct[d] = get_local_folder_structure(path + "/" + d)
+            struct[d] = get_folder_structure(path + "/" + d)
         return struct
     return {}
 
@@ -44,7 +44,7 @@ def create_folder_structure(path: str, struct: dict) -> None:
     if not os.path.isdir(path):
         os.mkdir(path)
     for key in struct:
-        create_local_folder_structure(os.path.join(path, key), struct[key])
+        create_folder_structure(os.path.join(path, key), struct[key])
 
 def get_filepaths(path: str, local: bool = False) -> list[str]:
     f = []

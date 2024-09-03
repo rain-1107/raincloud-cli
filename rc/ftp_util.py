@@ -1,6 +1,7 @@
 import os
 import json
 from ftplib import FTP, error_perm
+from const import *
 
 def connect_to_server() -> FTP:
     data = json.load(open(CONFIG_FOLDER + "/config.json", "r"))
@@ -16,7 +17,7 @@ def create_folder_structure(name: str, struct: dict, ftp: FTP) -> None:
         pass
     ftp.cwd(name)
     for key in struct:
-        create_server_folder_structure(key, struct[key], ftp)
+        create_folder_structure(key, struct[key], ftp)
     ftp.cwd("..")
 
 def get_file_bytes(ftp: FTP, file: str) -> bytes:

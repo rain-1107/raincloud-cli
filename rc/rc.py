@@ -7,7 +7,7 @@ import shutil
 from ftplib import error_perm
 import util
 import ftp_util
-from const import *
+from const import CONFIG_FOLDER, HOME 
 
 # TODO: create raincloud server 'protocol' at https://github.com/rain-1107/raincloud-server
 # TODO: create ability to change remote server type from ftp to raincloud
